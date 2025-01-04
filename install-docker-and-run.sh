@@ -7,86 +7,87 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # =============================
-# Étape 1 : Installation de Docker et Docker Compose
+# Étape 1 : Vérification et installation de Docker
 # =============================
 
-echo "Installation de Docker et Docker Compose..."
+echo "Vérification de l'installation de Docker..."
 
-# Mise à jour du système
-echo "Mise à jour des paquets..."
-apt update && apt upgrade -y
+if ! command -v docker &> /dev/null; then
+  echo "Docker n'est pas installé. Installation en cours..."
+  
+  # Mise à jour du système
+  apt update && apt upgrade -y
 
-# Installation des prérequis pour Docker
-echo "Installation des prérequis pour Docker..."
-apt install -y apt-transport-https ca-certificates curl software-properties-common
+  # Installation des prérequis pour Docker
+  apt install -y apt-transport-https ca-certificates curl software-properties-common
 
-# Ajout du dépôt officiel Docker
-echo "Ajout du dépôt officiel Docker..."
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+  # Ajout du dépôt officiel Docker
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
 
-# Installation de Docker
-echo "Installation de Docker..."
-apt update && apt install -y docker-ce docker-ce-cli containerd.io
+  # Installation de Docker
+  apt update && apt install -y docker-ce docker-ce-cli containerd.io
 
-# Vérification de l'installation de Docker
-if docker --version; then
-  echo "Docker a été installé avec succès !"
+  # Vérification de l'installation
+  if docker --version; then
+    echo "Docker a été installé avec succès !"
+  else
+    echo "Échec de l'installation de Docker."
+    exit 1
+  fi
+
+  # Ajout de l'utilisateur au groupe Docker
+  usermod -aG docker $USER
+  echo "Veuillez vous déconnecter et vous reconnecter pour que les modifications prennent effet."
 else
-  echo "Échec de l'installation de Docker."
-  exit 1
-fi
-
-# Ajout de l'utilisateur au groupe Docker
-echo "Ajout de l'utilisateur actuel au groupe Docker..."
-usermod -aG docker $USER
-
-# Installation de Docker Compose
-echo "Installation de Docker Compose..."
-
-# Détection de l'architecture système
-ARCH=$(uname -m)
-if [[ "$ARCH" == "x86_64" ]]; then
-  BIN_URL="https://github.com/docker/compose/releases/download/v2.32.0/docker-compose-linux-x86_64"
-elif [[ "$ARCH" == "aarch64" ]]; then
-  BIN_URL="https://github.com/docker/compose/releases/download/v2.32.0/docker-compose-linux-aarch64"
-elif [[ "$ARCH" == "i386" || "$ARCH" == "i686" ]]; then
-  BIN_URL="https://github.com/docker/compose/releases/download/v2.32.0/docker-compose-linux-i386"
-else
-  echo "Architecture non prise en charge : $ARCH"
-  exit 1
-fi
-
-# Téléchargement de Docker Compose
-curl -fSL "$BIN_URL" -o /usr/local/bin/docker-compose
-if [ $? -ne 0 ]; then
-  echo "Échec du téléchargement de Docker Compose. Vérifiez votre connexion ou l'URL."
-  exit 1
-fi
-
-# Attribution des permissions d'exécution
-chmod +x /usr/local/bin/docker-compose
-
-# Vérification de l'installation de Docker Compose
-if docker-compose --version; then
-  echo "Docker Compose a été installé avec succès !"
-else
-  echo "Échec de l'installation de Docker Compose."
-  exit 1
+  echo "Docker est déjà installé."
 fi
 
 # =============================
-# Étape 2 : Configuration Docker Compose
+# Étape 2 : Vérification et installation de Docker Compose
 # =============================
 
-echo "Création de la configuration Docker Compose..."
+echo "Vérification de l'installation de Docker Compose..."
 
-# Création du dossier du projet
+if ! command -v docker-compose &> /dev/null; then
+  echo "Docker Compose n'est pas installé. Installation en cours..."
+  
+  # Détection de l'architecture système
+  ARCH=$(uname -m)
+  if [[ "$ARCH" == "x86_64" ]]; then
+    BIN_URL="https://github.com/docker/compose/releases/download/v2.32.0/docker-compose-linux-x86_64"
+  elif [[ "$ARCH" == "aarch64" ]]; then
+    BIN_URL="https://github.com/docker/compose/releases/download/v2.32.0/docker-compose-linux-aarch64"
+  elif [[ "$ARCH" == "i386" || "$ARCH" == "i686" ]]; then
+    BIN_URL="https://github.com/docker/compose/releases/download/v2.32.0/docker-compose-linux-i386"
+  else
+    echo "Architecture non prise en charge : $ARCH"
+    exit 1
+  fi
+
+  # Téléchargement de Docker Compose
+  curl -fSL "$BIN_URL" -o /usr/local/bin/docker-compose
+  chmod +x /usr/local/bin/docker-compose
+
+  # Vérification de l'installation
+  if docker-compose --version; then
+    echo "Docker Compose a été installé avec succès !"
+  else
+    echo "Échec de l'installation de Docker Compose."
+    exit 1
+  fi
+else
+  echo "Docker Compose est déjà installé."
+fi
+
+# =============================
+# Étape 3 : Configuration Docker Compose
+# =============================
+
 PROJECT_DIR="$HOME/zero-trust-lab"
 mkdir -p "$PROJECT_DIR"
 cd "$PROJECT_DIR"
 
-# Création du fichier docker-compose.yml
 cat > docker-compose.yml <<EOL
 version: '3.9'
 services:
@@ -132,14 +133,11 @@ EOL
 echo "Fichier docker-compose.yml créé dans $PROJECT_DIR."
 
 # =============================
-# Étape 3 : Lancement des services Docker Compose
+# Étape 4 : Lancement des services Docker Compose
 # =============================
 
 echo "Lancement des services Docker Compose..."
 docker-compose up -d
 
-# Vérification des services
 echo "Les services suivants sont en cours d'exécution :"
 docker ps
-
-echo "Configuration et lancement terminés. Connectez-vous aux containers pour continuer votre TP."
