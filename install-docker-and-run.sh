@@ -94,30 +94,38 @@ services:
   server:
     image: debian:bullseye
     container_name: zero-trust-server
-    command: bash -c "mkdir -p /evidence_data && echo 'Preuve critique' > /evidence_data/evidence.txt && tail -f /dev/null"
+    command: bash -c "apt update && apt install -y nano sudo rsyslog nftables openssh-server telnet && mkdir -p /evidence_data && echo 'Preuve critique' > /evidence_data/evidence.txt && tail -f /dev/null"
     networks:
       zero_trust_net:
         ipv4_address: 192.168.1.10
     volumes:
       - server_data:/evidence_data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
     ports:
       - "2222:22"
 
   client:
     image: debian:bullseye
     container_name: zero-trust-client
-    command: tail -f /dev/null
+    command: bash -c "apt update && apt install -y nano sudo rsyslog nftables openssh-server telnet && tail -f /dev/null"
     networks:
       zero_trust_net:
         ipv4_address: 192.168.1.20
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
 
   siem:
     image: debian:bullseye
     container_name: siem-server
-    command: bash -c "apt update && apt install -y rsyslog && service rsyslog start && tail -f /dev/null"
+    command: bash -c "apt update && apt install -y nano sudo rsyslog nftables openssh-server telnet && bash -c 'service rsyslog start' && tail -f /dev/null"
     networks:
       zero_trust_net:
         ipv4_address: 192.168.1.30
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
 
 networks:
   zero_trust_net:
