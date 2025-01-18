@@ -104,6 +104,7 @@ services:
       - /etc/localtime:/etc/localtime:ro
     ports:
       - "2222:22"
+    privileged: true
 
   client:
     image: debian:bullseye
